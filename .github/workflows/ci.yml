@@ -15,4 +15,4 @@ jobs:
         run: docker build -t gemini-candlestick .
 
       - name: Check that the app imports
-        run: docker run --rm gemini-candlestick python -c "import main, geminicandlestick"
+        run: docker run --rm gemini-candlestick python -c "import main"

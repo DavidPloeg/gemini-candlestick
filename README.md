@@ -115,8 +115,20 @@ The app runs continuously. Times are in UTC.
 
 ```
 .
-├── main.py                # Entry point: daily scheduling loop
-├── geminicandlestick.py   # Data, indicators, charts, Gemini prompts, PDFs, Telegram
+├── main.py                # Entry point: daily schedule and sending reports
+├── candlestick/
+│   ├── fund.py            # GeminiCandlestick: runs one daily cycle end to end
+│   ├── market_data.py     # S&P 500 list and price download (yfinance)
+│   ├── indicators.py      # RSI, MACD, Bollinger Bands, Ichimoku, Stochastic, CMF, OBV, ATR
+│   ├── charts.py          # Candlestick chart drawing (matplotlib)
+│   ├── prompts.py         # Gemini prompts for the board meeting
+│   ├── gemini.py          # Gemini API wrapper and model settings
+│   ├── parsing.py         # Cleaning minutes and extracting JSON from model output
+│   ├── reports.py         # Markdown/images to PDF, merging PDFs
+│   ├── telegram.py        # Telegram Bot API client
+│   ├── clock.py           # UTC date and time helpers
+│   ├── config.py          # Shared settings (paths, chart sizes, default model)
+│   └── log.py             # Console logging
 ├── requirements.txt       # Pinned Python dependencies
 ├── Dockerfile             # Container image (ARM64 and x86_64)
 ├── docker-compose.yml     # Service definition, reads .env
