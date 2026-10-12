@@ -1,25 +1,11 @@
 services:
-  # Define a service called Container01
-  Container03:
-    # Use the image 'autotrade_main_custom' if it exists
-    image: gemini_candlestick_main_custom
+  gemini-candlestick:
+    image: gemini_candlestick
     restart: always
-    # If the image doesn't exist, build it
-    build:
-      # Use the current directory as the build context
-      context: .
-      # Use the Dockerfile named 'Dockerfile.custom'
-      dockerfile: "./Dockerfile.custom"
-    # Set environment variables for the container
-    environment:
-      # Gemini API Key
-      - gemini_key=AIzaSyCY2krWzRCAMU9n4BP4KAeQgDeQ2cM9NgI
-      # Telegram Bot Token
-      - BOT_TOKEN=6634636445:AAE4FORei5yEjJmEZmEOHLrHQ4URFKB-yqI
-      # Telegram Chat ID
-      - CHAT_ID=-1002105947055
-    # Set the container name
-    container_name: Container03
-    # Map the current directory on the host to /opt/app in the container
+    build: .
+    # API keys and IDs are read from .env (copy .env.example to .env)
+    env_file: .env
+    container_name: gemini-candlestick
+    # Keep generated reports and charts on the host in ./data
     volumes:
-      - .:/opt/app
+      - ./data:/opt/app/data

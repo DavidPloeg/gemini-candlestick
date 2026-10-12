@@ -1,132 +1,133 @@
-# Gemini Candlestick Investment Fund Simulation
+# Gemini Candlestick Investment Fund
+
+[![CI](https://github.com/thanatchon36/gemini-candlestick/actions/workflows/ci.yml/badge.svg)](https://github.com/thanatchon36/gemini-candlestick/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![Docker](https://img.shields.io/badge/docker-ready-2496ED)
+![Gemini](https://img.shields.io/badge/Google-Gemini%20API-8E75B2)
+
+An AI-simulated board meeting of legendary technical analysts. Every day it charts the S&P 500, asks Google Gemini to debate the charts as ten famous market technicians, and posts the meeting minutes, a summary, and the highlighted charts to Telegram.
 
 [![Watch the Demo Video](https://img.youtube.com/vi/nJvH27cIxFo/maxresdefault.jpg)](https://www.youtube.com/watch?v=nJvH27cIxFo)
 
-> 🏆 **Google Gemini API Developer Competition Project:**  
-> Check out our submission page here: [https://ai.google.dev/competition/projects/gemini-candlestick](https://ai.google.dev/competition/projects/gemini-candlestick)
+> 🏆 **Google Gemini API Developer Competition project.** [View the submission page](https://ai.google.dev/competition/projects/gemini-candlestick).
 
----
-
-This repository hosts a Python application that simulates the investment decision-making process of the "Gemini Candlestick Investment Fund," a fictional investment board. The simulation employs candlestick chart analysis, technical indicators, and Google's Gemini large language model to inform investment strategies.
+> [!WARNING]
+> This is an educational simulation, **not financial advice**. The "Gemini Candlestick Investment Fund" is fictional, and its AI-generated analysis can be wrong.
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Key Features](#key-features)
-- [Use Cases](#use-cases)
-- [Getting Started](#getting-started)
+- [How It Works](#how-it-works)
+- [The Board of Directors](#the-board-of-directors)
+- [Quick Start](#quick-start)
 - [Configuration](#configuration)
-  - [How to get your Telegram Bot Token & Chat ID](#how-to-get-your-telegram-bot-token--chat-id)
-- [Structure](#structure)
+- [Daily Schedule](#daily-schedule)
+- [Project Structure](#project-structure)
+- [Requirements](#requirements)
 - [License](#license)
-- [Hardware Requirements](#hardware-requirements)
 
-## Introduction
+## How It Works
 
-The Gemini Candlestick Investment Fund application represents a sophisticated solution meticulously crafted to replicate the intricate dynamics of a board of directors' meeting. By harnessing advanced algorithms, it meticulously analyzes stock market data to formulate hypothetical investment strategies. Leveraging candlestick charts, technical indicators, and the computational prowess of Google's Gemini large language model, this application offers a distinctive capability: reviving esteemed figures of the financial realm to engage in comprehensive discussions. This immersive feature enables these luminaries to convene and deliberate as if in a real-world setting. As a result, users are provided with an interactive environment that mirrors authentic financial analysis and decision-making processes, fostering a deeper understanding of investment strategies.
+```mermaid
+flowchart LR
+    A[Yahoo Finance<br/>S&P 500 daily prices] --> B[TA-Lib<br/>technical indicators]
+    B --> C[matplotlib<br/>candlestick charts]
+    C --> D[Gemini<br/>board meeting minutes]
+    D --> E[Gemini<br/>summary, picks & captions]
+    E --> F[PDF reports]
+    F --> G[Telegram channel]
+```
 
-### Board of Directors
+1. **Collect data:** downloads one year of daily prices for every S&P 500 stock with `yfinance`.
+2. **Compute indicators:** RSI, MACD, Bollinger Bands, Fibonacci retracement, Ichimoku Cloud, Stochastic Oscillator, Chaikin Money Flow, On-Balance Volume, and ATR.
+3. **Draw charts:** one candlestick chart per stock, with all indicators stacked below the price.
+4. **Hold the meeting:** uploads the charts to Gemini and generates many candidate meeting minutes. It keeps the best one, then extracts the board's "Ticker Symbols of Interest" and writes a summary.
+5. **Publish:** builds PDF reports and sends them to Telegram, along with captioned charts of the selected stocks.
 
-The esteemed board of directors comprises notable figures in the realm of financial analysis, each tasked with analyzing specific indicators and offering their expert insights:
+## The Board of Directors
 
-1. **Munehisa Homma**, Chairman of the Board: Responsible for scrutinizing Candlestick Pattern Recognition and delivering informed perspectives.
-2. **John Bollinger**: Tasked with assessing the Bollinger Bands (BB) indicator and providing analytical commentary.
-3. **Leonardo Pisano Fibonacci**: Assigned to evaluate Fibonacci retracement levels and deliver insightful opinions.
-4. **Ralph Nelson Elliott**: Engaged in analyzing potential Elliott Wave patterns employing Fibonacci ratios (0.786, 0.618, 0.5, 0.382, and 0.236 on Fibonacci retracement charts), RSI, MACD, and Bollinger Bands to ascertain wave retracements and projections within the patterns, and furnishing comprehensive opinions.
-5. **Goichi Hosoda**: Entrusted with the evaluation of the Ichimoku Cloud and furnishing expert opinions.
-6. **Joseph Granville**: Responsible for analyzing Volume and On-Balance Volume (OBV) indicators and delivering expert opinions.
-7. **Gerald Appel**: Tasked with analyzing the MACD indicator and providing discerning viewpoints.
-8. **J. Welles Wilder**: Charged with analyzing RSI and ATR indicators and offering well-founded opinions.
-9. **George Lane**: Assigned to evaluate the Stochastic Oscillator indicator and provide expert insights.
-10. **Marc Chaikin**: Entrusted with the analysis of the Chaikin Money Flow indicator and delivering comprehensive opinions.
+| Member | Speciality |
+|---|---|
+| **Munehisa Homma** (Chairman) | Candlestick pattern recognition |
+| **John Bollinger** | Bollinger Bands |
+| **Leonardo Pisano Fibonacci** | Fibonacci retracement levels |
+| **Ralph Nelson Elliott** | Elliott Wave patterns, using Fibonacci ratios, RSI, MACD, and Bollinger Bands |
+| **Goichi Hosoda** | Ichimoku Cloud |
+| **Joseph Granville** | Volume and On-Balance Volume (OBV) |
+| **Gerald Appel** | MACD |
+| **J. Welles Wilder** | RSI and ATR |
+| **George Lane** | Stochastic Oscillator |
+| **Marc Chaikin** | Chaikin Money Flow |
 
-## Key Features
+## Quick Start
 
-- **Data Acquisition:** Efficiently retrieves historical candlestick data for selected stocks from the S&P 500 index utilizing the `yfinance` library.
-- **Technical Analysis:** Conducts a comprehensive analysis by computing various technical indicators, including:
-  - Relative Strength Index (RSI)
-  - Moving Average Convergence Divergence (MACD)
-  - Bollinger Bands
-  - Fibonacci Retracement Levels
-  - Ichimoku Cloud
-  - Stochastic Oscillator
-  - Chaikin Money Flow
-  - On-Balance Volume (OBV)
-  - Average True Range (ATR)
-- **Candlestick Charting:** Generates detailed and visually appealing candlestick charts overlaid with technical indicators using `matplotlib` and `mplfinance`.
-- **Google Gemini Integration:** Utilizes Google's Gemini large language model to:
-  - Simulate discussions and analyses resembling those of board members.
-  - Generate comprehensive meeting minutes covering market observations, individual stock analyses, and investment rationale.
-  - Summarize actionable insights, key takeaways, and the fund's overall market strategy.
-  - Create engaging captions for charts and reports.
-- **Telegram Integration:** Automatically distributes daily reports, summaries, and highlighted candlestick charts to a designated Telegram chat via the Telegram Bot API.
+You need [Docker](https://docs.docker.com/get-docker/), a [Gemini API key](https://aistudio.google.com/apikey), and a Telegram bot ([setup guide](#telegram-setup)).
 
-## Use Cases
+```bash
+git clone https://github.com/thanatchon36/gemini-candlestick.git
+cd gemini-candlestick
+cp .env.example .env        # then fill in your keys
+docker compose up -d --build
+docker compose logs -f      # watch progress
+```
 
-- **Educational Tool:** Serves as a comprehensive resource for understanding the application of candlestick charts and technical indicators in financial analysis, providing concrete examples and hands-on learning opportunities.
-- **Simulation Environment:** Creates a secure and controlled platform for experimenting with various investment strategies, allowing users to observe potential outcomes without real financial risk.
-- **Algorithmic Trading Inspiration:** Acts as a catalyst for the development of automated trading strategies, utilizing technical indicators and sentiment analysis from language models.
-- **Financial Education:** Facilitates learning about different technical indicators, candlestick patterns, and their interpretations through an immersive and interactive simulated environment.
+Reports and charts are saved to `./data`.
 
-## Getting Started
+<details>
+<summary><strong>Run without Docker</strong></summary>
 
-To get the application up and running, follow these steps:
+Requires Python 3.12 or newer. TA-Lib installs from a prebuilt wheel, so you don't need to compile it. To make PDFs, `weasyprint` needs the Pango library (`brew install pango` on macOS, `apt install libpango-1.0-0 libpangoft2-1.0-0` on Debian/Ubuntu).
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/thanatchon36/gemini-candlestick.git
-   ```
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+set -a && source .env && set +a   # load keys from .env
+python main.py
+```
 
-2. **Navigate to the Project Directory:**
-   ```bash
-   cd gemini-candlestick
-   ```
-
-3. **Start the Application:**
-   ```bash
-   docker-compose up -d 
-   ```
+</details>
 
 ## Configuration
 
-Before running the application, you need to configure the following environment variables in the `docker-compose.yml` file:
+All settings live in `.env`, which git ignores. Never commit real keys.
 
-- **`GEMINI_KEY`:** Your Google Gemini API key. Replace `YOUR_GEMINI_API_KEY` with your actual key.
-- **`BOT_TOKEN`:** Your Telegram bot token. Replace `YOUR_TELEGRAM_BOT_TOKEN` with your bot's token.
-- **`CHAT_ID`:** The ID of your Telegram chat/channel. Replace `YOUR_TELEGRAM_CHAT_ID` with your chat's ID.
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | Google Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey). |
+| `BOT_TOKEN` | Yes | Telegram bot token. |
+| `CHAT_ID` | Yes | Telegram channel or chat ID. |
+| `GEMINI_MODEL` | No | Gemini model to use. Defaults to `gemini-3.8-flash`. |
 
-### How to get your Telegram Bot Token & Chat ID
+### Telegram Setup
 
-1. **Create a Bot and get `BOT_TOKEN`:**
-   - Open Telegram and search for `@BotFather`.
-   - Send `/newbot` and follow the prompts to choose a name and username for your bot.
-   - Copy the HTTP API access token provided by BotFather (e.g., `123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ`).
+1. **Create a bot:** message [@BotFather](https://t.me/BotFather), send `/newbot`, and copy the token it gives you into `BOT_TOKEN`.
+2. **Create a channel** and add your bot as an administrator (Channel Info → Administrators → Add Admin).
+3. **Find the chat ID:** temporarily add [@RawDataBot](https://t.me/RawDataBot) to the channel and post a message. It replies with the channel ID, which usually starts with `-100`. Copy it into `CHAT_ID`, then remove `@RawDataBot`.
 
-2. **Create a Channel and add your bot as an Administrator:**
-   - Create a new Telegram Channel.
-   - Go to Channel Info > **Administrators** > **Add Admin**.
-   - Search for your bot username and add it as an administrator.
+## Daily Schedule
 
-3. **Get your `CHAT_ID`:**
-   - Add `@RawDataBot` as an administrator to your channel temporarily.
-   - Post any test message in the channel.
-   - `@RawDataBot` will automatically reply with the Channel ID (usually starts with `-100...`).
-   - Copy the ID (e.g., `-1002161110558`) and set it as your `CHAT_ID`.
-   - You can remove `@RawDataBot` from the channel afterwards.
+The app runs continuously. Times are in UTC.
 
-## Structure
+- **On start:** generates and sends a report straight away.
+- **Each day at 00:04:** regenerates the charts and holds a new board meeting. Charts are not refreshed on Sunday and Monday, because the market was closed the day before.
+- **About 02:00:** sends the PDF minutes and summary, then the highlighted charts in batches of up to 8.
 
-- **`docker-compose.yml`:** Defines the Docker container for running the application.
-- **`Dockerfile.custom`:** Specifies instructions for building the Docker image, including installing dependencies and setting up the environment.
-- **`geminicandlestick.py`:** Contains the main class, `GeminiCandlestick`, which handles data fetching, processing, charting, and Telegram interactions.
-- **`main.py`:** The entry point of the application. Manages the overall workflow of data generation, charting, and Telegram notifications.
+## Project Structure
+
+```
+.
+├── main.py                # Entry point: daily scheduling loop
+├── geminicandlestick.py   # Data, indicators, charts, Gemini prompts, PDFs, Telegram
+├── requirements.txt       # Pinned Python dependencies
+├── Dockerfile             # Container image (ARM64 and x86_64)
+├── docker-compose.yml     # Service definition, reads .env
+└── .env.example           # Template for required settings
+```
+
+## Requirements
+
+- **Hardware:** 2 CPU cores (ARM64 or x86_64), 2 GB RAM, 16 GB storage. Developed and tested on a MacBook M1.
+- **Software:** Docker, or Python 3.12 or newer.
 
 ## License
 
-This project is submitted to The Gemini API Developer Competition, sponsored by Google LLC. The submission is subject to the [Official Rules of the competition](https://ai.google.dev/competition), including the intellectual property provisions. 
-
-## Hardware Requirements
-
-- **Minimum & Recommended:** CPU: 2 cores (ARM64 architecture), RAM: 2GB, Storage: 16 GB
-
-This application has been developed and tested on a MacBook M1, which comfortably meets these requirements.
+This project was submitted to The Gemini API Developer Competition, sponsored by Google LLC. The submission is subject to the [Official Rules of the competition](https://ai.google.dev/competition), including the intellectual property provisions.
