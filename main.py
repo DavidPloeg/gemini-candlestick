@@ -35,9 +35,15 @@ def main():
             os.makedirs(dir_path)
 
     # Retrieve environment variables for API keys and configurations
-    gemini_key = str(os.getenv('gemini_key'))  # Gemini API key
-    BOT_TOKEN = str(os.getenv('BOT_TOKEN'))    # Telegram Bot Token
-    CHAT_ID = str(os.getenv('CHAT_ID'))        # Telegram Chat ID
+    gemini_key = os.getenv('GEMINI_API_KEY') or os.getenv('gemini_key')  # Gemini API key ('gemini_key' kept for old setups)
+    BOT_TOKEN = os.getenv('BOT_TOKEN')    # Telegram Bot Token
+    CHAT_ID = os.getenv('CHAT_ID')        # Telegram Chat ID
+    gemini_model = os.getenv('GEMINI_MODEL') or 'gemini-3.8-flash'  # Gemini model name
+
+    # Stop early with a clear message if any required setting is missing
+    missing = [name for name, value in [('GEMINI_API_KEY', gemini_key), ('BOT_TOKEN', BOT_TOKEN), ('CHAT_ID', CHAT_ID)] if not value]
+    if missing:
+        sys.exit(f"Missing environment variables: {', '.join(missing)}. Copy .env.example to .env and fill them in.")
 
     # Create an instance of the GeminiCandlestick class 
     # This handles data and Telegram operations
@@ -45,7 +51,8 @@ def main():
         gemini_key=gemini_key,
         BOT_TOKEN=BOT_TOKEN,
         CHAT_ID=CHAT_ID,
-        freq_interval='1d'  # Set data frequency to daily ('1d')
+        freq_interval='1d',  # Set data frequency to daily ('1d')
+        gemini_model=gemini_model
     )
 
     # Debug

@@ -82,18 +82,45 @@ To get the application up and running, follow these steps:
    cd gemini-candlestick
    ```
 
-3. **Start the Application:**
+3. **Add your keys** (see [Configuration](#configuration)):
    ```bash
-   docker-compose up -d 
+   cp .env.example .env
+   # then edit .env
    ```
+
+4. **Start the Application:**
+   ```bash
+   docker compose up -d --build
+   ```
+
+5. **Watch the logs:**
+   ```bash
+   docker compose logs -f
+   ```
+
+Generated reports and charts are saved to the `data/` folder.
+
+### Running without Docker
+
+Requires Python 3.12 or newer. TA-Lib installs from a prebuilt wheel, so you don't need to compile it. To make PDFs, `weasyprint` needs the Pango library (`brew install pango` on macOS, `apt install libpango-1.0-0 libpangoft2-1.0-0` on Debian/Ubuntu).
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+set -a && source .env && set +a   # load keys from .env
+python main.py
+```
 
 ## Configuration
 
-Before running the application, you need to configure the following environment variables in the `docker-compose.yml` file:
+Copy `.env.example` to `.env` and fill in the values. `.env` is git-ignored, so never commit your real keys.
 
-- **`GEMINI_KEY`:** Your Google Gemini API key. Replace `YOUR_GEMINI_API_KEY` with your actual key.
-- **`BOT_TOKEN`:** Your Telegram bot token. Replace `YOUR_TELEGRAM_BOT_TOKEN` with your bot's token.
-- **`CHAT_ID`:** The ID of your Telegram chat/channel. Replace `YOUR_TELEGRAM_CHAT_ID` with your chat's ID.
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | Yes | Your Google Gemini API key. Get one at [Google AI Studio](https://aistudio.google.com/apikey). |
+| `BOT_TOKEN` | Yes | Your Telegram bot token (see below). |
+| `CHAT_ID` | Yes | The ID of your Telegram chat/channel (see below). |
+| `GEMINI_MODEL` | No | The Gemini model to use. Defaults to `gemini-3.8-flash`. |
 
 ### How to get your Telegram Bot Token & Chat ID
 
@@ -118,6 +145,8 @@ Before running the application, you need to configure the following environment 
 
 - **`docker-compose.yml`:** Defines the Docker container for running the application.
 - **`Dockerfile.custom`:** Specifies instructions for building the Docker image, including installing dependencies and setting up the environment.
+- **`requirements.txt`:** Pinned Python dependencies.
+- **`.env.example`:** Template for the required environment variables.
 - **`geminicandlestick.py`:** Contains the main class, `GeminiCandlestick`, which handles data fetching, processing, charting, and Telegram interactions.
 - **`main.py`:** The entry point of the application. Manages the overall workflow of data generation, charting, and Telegram notifications.
 
@@ -127,6 +156,6 @@ This project is submitted to The Gemini API Developer Competition, sponsored by 
 
 ## Hardware Requirements
 
-- **Minimum & Recommended:** CPU: 2 cores (ARM64 architecture), RAM: 2GB, Storage: 16 GB
+- **Minimum & Recommended:** CPU: 2 cores (ARM64 or x86_64), RAM: 2GB, Storage: 16 GB
 
 This application has been developed and tested on a MacBook M1, which comfortably meets these requirements.

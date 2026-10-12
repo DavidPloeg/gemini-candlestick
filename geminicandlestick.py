@@ -48,7 +48,7 @@ import numpy as np # Import the NumPy library and give it the alias 'np'.
 from pytickersymbols import PyTickerSymbols
 
 # Google Generative AI services
-import google.generativeai as genai
+from google import genai
 
 # Plotting and visualization
 import matplotlib
@@ -63,10 +63,10 @@ import matplotlib.dates as mdates  # Date handling in plots
 from mplfinance.original_flavor import candlestick_ohlc  
 
 # PDF generation and manipulation
-import pdfkit
+from weasyprint import HTML  # HTML to PDF conversion
 from pdf2image import convert_from_path  # PDF to image conversion
 from img2pdf import convert  # Image to PDF conversion
-from PyPDF2 import PdfMerger  # PDF file merging
+from pypdf import PdfWriter  # PDF file merging
 import markdown # Import the "markdown" library. 
 
 def reset_dataframe_index(df: pd.DataFrame) -> pd.DataFrame:
@@ -109,7 +109,7 @@ class GeminiCandlestick:
     """
     A class to fetch and process candlestick data from the Gemini API.
     """
-    def __init__(self, gemini_key, BOT_TOKEN, CHAT_ID, freq_interval="1d"):
+    def __init__(self, gemini_key, BOT_TOKEN, CHAT_ID, freq_interval="1d", gemini_model="gemini-3.8-flash"):
         """
         Initializes the GeminiCandlestick object.
 
@@ -118,8 +118,10 @@ class GeminiCandlestick:
             BOT_TOKEN (str): Your Telegram bot token.
             CHAT_ID (str): Your Telegram chat ID.
             freq_interval (str, optional): The frequency interval for candlestick data. Defaults to "1d" (daily).
+            gemini_model (str, optional): The Gemini model name. Defaults to "gemini-3.8-flash".
         """
         self.gemini_key = gemini_key
+        self.gemini_model = gemini_model
         self.freq_interval = freq_interval
         self.BOT_TOKEN = BOT_TOKEN
         self.CHAT_ID = CHAT_ID
@@ -486,6 +488,9 @@ class GeminiCandlestick:
         # Remove duplicate entries based on 'symbol'
         sp500_df = reset_dataframe_index(sp500_df).groupby('symbol').first().reset_index()
 
+        # Use Yahoo Finance's symbol format for share classes (e.g., BRK.B -> BRK-B)
+        sp500_df['symbol'] = sp500_df['symbol'].str.replace('.', '-', regex=False)
+
         # Download historical candlestick data for all symbols using yfinance
         # The period is set to twice the number of candlestick charts required
         candlestick_df = yf.download(list(sp500_df['symbol'].values),
@@ -527,8 +532,7 @@ class GeminiCandlestick:
         # Reset the index of the filtered dataframe
         self.sp500_df = reset_dataframe_index(self.sp500_df)
 
-        # Combine multiple industries and indices into single semicolon-separated strings
-        self.sp500_df['indices'] = self.sp500_df['indices'].apply(lambda x: ';'.join(x))
+        # Combine multiple industries into a single semicolon-separated string
         self.sp500_df['industries'] = self.sp500_df['industries'].apply(lambda x: ';'.join(x))
 
         # Save the processed dataframe to a CSV file
@@ -1004,7 +1008,7 @@ class GeminiCandlestick:
             "temperature": 1,  # Temperature controls the randomness of the generated text
             "top_p": 0.95,  # Top_p controls the diversity of the generated text
             "top_k": 40,  # Top_k controls the number of possible next words considered
-            "max_output_tokens": 1000000,  # Maximum number of tokens allowed in the generated text
+            "max_output_tokens": 65536,  # Maximum number of tokens allowed in the generated text
             "response_mime_type": "text/plain",  # Response format
         }
         return generation_config
@@ -1015,16 +1019,26 @@ class GeminiCandlestick:
             "temperature": 1,  # Temperature controls the randomness of the generated text
             "top_p": 0.95,  # Top_p controls the diversity of the generated text
             "top_k": 40,  # Top_k controls the number of possible next words considered
-            "max_output_tokens": 168,  # Maximum number of tokens allowed in the generated text
+            "max_output_tokens": 4096,  # Leaves room for the model's thinking tokens; captions are trimmed to Telegram's limit
             "response_mime_type": "text/plain",  # Response format
         }
         return generation_config
     
+    def gemini_generate(self, contents, generation_config, safety_settings, system_instruction=None):
+        """Calls the Gemini model and returns the generated text."""
+        config = dict(generation_config, safety_settings=safety_settings, http_options={"timeout": 1000 * 1000})  # Timeout in milliseconds
+        if system_instruction:
+            config["system_instruction"] = system_instruction
+        response = self.client.models.generate_content(model=self.gemini_model, contents=contents, config=config)
+        if response.text is None:
+            raise ValueError(f"Empty response from Gemini (finish reason: {response.candidates[0].finish_reason if response.candidates else None})")
+        return response.text
+
     def generate_gemini_candlestick(self):
         """Generates reports and summaries based on candlestick chart data using the Gemini API."""
 
         # Configure the Gemini API
-        genai.configure(api_key=self.gemini_key)
+        self.client = genai.Client(api_key=self.gemini_key)
 
         # Set up the model parameters for Gemini
         generation_config = self.get_generation_config_1()
@@ -1059,7 +1073,7 @@ class GeminiCandlestick:
             self.prompt_parts = []
             
             # Iterate over each ticker in the ticker list with a progress bar
-            for each_ticker in tqdm(self.ticker_list, desc="genai.upload_file"):
+            for each_ticker in tqdm(self.ticker_list, desc="client.files.upload"):
                 # Try uploading the chart image for the current ticker 6 times
                 for _ in range(6):
                     try:
@@ -1067,9 +1081,9 @@ class GeminiCandlestick:
                         self.ticker = each_ticker
                         
                         # Upload the chart image to GenAI and store the returned object
-                        temp_file = genai.upload_file(
-                            path=f"data/png_optimized/{each_ticker}.png",  # Path to the image file
-                            display_name=f'{self.ticker_company} ({each_ticker}): 1d Candlestick Chart (with Technical Indicators)'  # Display name for the image
+                        temp_file = self.client.files.upload(
+                            file=f"data/png_optimized/{each_ticker}.png",  # Path to the image file
+                            config={'display_name': f'{self.ticker_company} ({each_ticker}): 1d Candlestick Chart (with Technical Indicators)'}  # Display name for the image
                         )
                         
                         # Append the uploaded file object to the prompt parts list
@@ -1097,23 +1111,22 @@ class GeminiCandlestick:
                     random.shuffle(self.prompt_parts)
 
                     # Generate meeting minutes using the Gemini Pro model
-                    temp_minutes_text = str(genai.GenerativeModel(
-                        model_name="gemini-1.5-flash-latest",  # Specify the model name
-                        generation_config=generation_config,   # Pass the generation configuration
-                        # system_instruction=self.get_system_instructions_1(),  # Set the system instructions for minutes generation
-                        safety_settings=safety_settings       # Enforce safety settings during text generation
-                    ).generate_content([self.get_system_instructions_1()] + self.prompt_parts, request_options={"timeout": 1000}).text) 
+                    temp_minutes_text = self.gemini_generate(
+                        [self.get_system_instructions_1()] + self.prompt_parts,
+                        generation_config,  # Pass the generation configuration
+                        safety_settings     # Enforce safety settings during text generation
+                    )
 
                     # Introduce a delay to avoid rate limiting
                     time.sleep(4)
 
                     # Generate a summary of the meeting minutes
-                    temp_summary_text = str(genai.GenerativeModel(
-                        model_name="gemini-1.5-flash-latest",
-                        generation_config=generation_config,
-                        system_instruction=self.get_system_instructions_2(),  # Set system instructions for summary generation
-                        safety_settings=safety_settings
-                    ).generate_content(temp_minutes_text).text)
+                    temp_summary_text = self.gemini_generate(
+                        temp_minutes_text,
+                        generation_config,
+                        safety_settings,
+                        system_instruction=self.get_system_instructions_2()  # Set system instructions for summary generation
+                    )
 
                     # Apply quality checks to ensure the generated text meets specific criteria
                     # Check if the generated text does not contain '[' or ']' characters
@@ -1207,12 +1220,12 @@ class GeminiCandlestick:
                         start_index = each_i.lower().find("Ticker Symbols of Interest".lower()) 
                         
                         # Generate content from the "Ticker Symbols of Interest" section using the generative model
-                        generation_result = genai.GenerativeModel(
-                            model_name="gemini-1.5-flash-latest",
-                            generation_config=generation_config,
-                            system_instruction=self.get_system_instructions_3(), 
-                            safety_settings=safety_settings
-                        ).generate_content(each_i[start_index:]).text
+                        generation_result = self.gemini_generate(
+                            each_i[start_index:],
+                            generation_config,
+                            safety_settings,
+                            system_instruction=self.get_system_instructions_3()
+                        )
 
                         # Extract ticker list from the generated content
                         interest_ticker_list = str(generation_result)
@@ -1270,9 +1283,9 @@ class GeminiCandlestick:
                 file.write(summary_text)
 
             # Delete uploaded files from Gemini
-            for each_prompt_part in tqdm(self.prompt_parts, desc="genai.delete_file"):
+            for each_prompt_part in tqdm(self.prompt_parts, desc="client.files.delete"):
                 try:
-                    genai.delete_file(each_prompt_part.name)
+                    self.client.files.delete(name=each_prompt_part.name)
                 except:
                     pass
 
@@ -1322,12 +1335,12 @@ class GeminiCandlestick:
                     time.sleep(4)  # Wait for 4 seconds before each attempt
 
                     # Generate the summary text using the Gemini model
-                    self.telegram_minutes_text = str(genai.GenerativeModel(
-                        model_name="gemini-1.5-flash-latest",
-                        generation_config=generation_config,
-                        system_instruction=self.get_system_instructions_7(),  
-                        safety_settings=safety_settings
-                    ).generate_content(minutes_text).text)
+                    self.telegram_minutes_text = self.gemini_generate(
+                        minutes_text,
+                        generation_config,
+                        safety_settings,
+                        system_instruction=self.get_system_instructions_7()
+                    )[:900]  # Stay under Telegram's 1024-character caption limit (emoji count double)
 
                     # Exit the loop if generation is successful
                     break 
@@ -1347,12 +1360,12 @@ class GeminiCandlestick:
                     time.sleep(4)
 
                     # Generate the summary text using the Gemini model.
-                    self.telegram_summary_text = str(genai.GenerativeModel(
-                        model_name="gemini-1.5-flash-latest",
-                        generation_config=generation_config,
-                        system_instruction=self.get_system_instructions_7(),
-                        safety_settings=safety_settings
-                    ).generate_content(summary_text).text)
+                    self.telegram_summary_text = self.gemini_generate(
+                        summary_text,
+                        generation_config,
+                        safety_settings,
+                        system_instruction=self.get_system_instructions_7()
+                    )[:900]  # Stay under Telegram's 1024-character caption limit (emoji count double)
 
                     # Exit the loop if successful.
                     break
@@ -1371,7 +1384,7 @@ class GeminiCandlestick:
             self.prompt_parts = []
 
             # Iterate over each ticker in the list
-            for each_ticker in tqdm(self.interest_ticker_list, desc="genai.upload_file"):
+            for each_ticker in tqdm(self.interest_ticker_list, desc="client.files.upload"):
                 # Attempt to upload the image 6 times
                 for _ in range(6):
                     try:
@@ -1379,9 +1392,9 @@ class GeminiCandlestick:
                         self.ticker = each_ticker
 
                         # Upload the image to genai
-                        temp_file = genai.upload_file(
-                            path=f"data/png_optimized/{each_ticker}.png", 
-                            display_name=f'{self.ticker_company} ({each_ticker}): 1d Candlestick Chart (with Technical Indicators)' 
+                        temp_file = self.client.files.upload(
+                            file=f"data/png_optimized/{each_ticker}.png",  # Path to the image file
+                            config={'display_name': f'{self.ticker_company} ({each_ticker}): 1d Candlestick Chart (with Technical Indicators)'}  # Display name for the image
                         )
 
                         # Append the uploaded file to prompt parts and image path to image paths list
@@ -1407,12 +1420,11 @@ class GeminiCandlestick:
                     try:
                         time.sleep(4)  # Wait for rate limiting or server congestion
                         # Generate a photo caption using Gemini Pro
-                        photo_caption = str(genai.GenerativeModel(
-                            model_name="gemini-1.5-flash-latest",  # Specify the Gemini model
-                            generation_config=generation_config,  # Pass the generation configuration
-                            # system_instruction=self.get_system_instructions_7(),  # Get instructions for this part
-                            safety_settings=safety_settings  # Enforce safety settings
-                        ).generate_content([self.get_system_instructions_7(), each_prompt_part]).text)
+                        photo_caption = self.gemini_generate(
+                            [self.get_system_instructions_7(), each_prompt_part],
+                            generation_config,  # Pass the generation configuration
+                            safety_settings     # Enforce safety settings
+                        )[:900]  # Stay under Telegram's 1024-character caption limit (emoji count double)
 
                         # Append the generated caption to the list
                         self.photo_caption_list.append(photo_caption)
@@ -1429,9 +1441,9 @@ class GeminiCandlestick:
             generation_config = self.get_generation_config_1()
 
             # Delete uploaded images from Gemini after generating captions
-            for each_prompt_part in tqdm(self.prompt_parts, desc="genai.delete_file"):
+            for each_prompt_part in tqdm(self.prompt_parts, desc="client.files.delete"):
                 try:
-                    genai.delete_file(each_prompt_part.name)
+                    self.client.files.delete(name=each_prompt_part.name)
                 except:
                     pass
 
@@ -1450,9 +1462,9 @@ class GeminiCandlestick:
             self.docker_print(temp_msg)  # Assuming 'docker_print' logs the error message
             try:
                 # Attempt to delete uploaded files from Gemini in case of an error
-                for each_prompt_part in tqdm(self.prompt_parts, desc="genai.delete_file"):
+                for each_prompt_part in tqdm(self.prompt_parts, desc="client.files.delete"):
                     try:
-                        genai.delete_file(each_prompt_part.name)
+                        self.client.files.delete(name=each_prompt_part.name)
                     except:
                         pass
             except:
@@ -1817,12 +1829,8 @@ class GeminiCandlestick:
             next_i = next_i + 26
             xticklabels_list.append(self.get_date_month_text(ohlc['ori_Date'].values[next_i]))
 
-        # Create a list for the last x-axis tick label
-        xticklabels_list_2 = [xticklabels_list[-1]]
-        
-        # Convert string dates to datetime objects for calculation
-        dates = [datetime.datetime.strptime(date, '%d %b') for date in xticklabels_list_2]
-        last_date = dates[-1]
+        # Parse the last x-axis tick date with its year (avoids leap-day errors and wrong weekdays)
+        last_date = datetime.datetime.strptime(ohlc['ori_Date'].values[next_i], '%Y-%m-%d')
         
         # Calculate next weekdays (Monday to Friday)
         next_days = []
@@ -2319,8 +2327,8 @@ class GeminiCandlestick:
             output_filename (str): The name of the output PDF file.
         """
 
-        # Create a PdfMerger object
-        merger = PdfMerger()
+        # Create a PdfWriter object
+        merger = PdfWriter()
 
         # Iterate over the list of PDF file paths
         for path in paths:
@@ -2330,7 +2338,7 @@ class GeminiCandlestick:
         # Write the merged PDF to the output file
         merger.write(output_filename)
 
-        # Close the PdfMerger object
+        # Close the PdfWriter object
         merger.close()
 
     def markdown_to_pdf(self, markdown_text, output_pdf_path):
@@ -2344,5 +2352,5 @@ class GeminiCandlestick:
         # Convert Markdown to HTML using the markdown library
         html_text = markdown.markdown(markdown_text)
         
-        # Convert the HTML to PDF using the pdfkit library
-        pdfkit.from_string(html_text, output_pdf_path)
+        # Convert the HTML to PDF using the weasyprint library
+        HTML(string=html_text).write_pdf(output_pdf_path)

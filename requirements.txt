@@ -1,0 +1,16 @@
+google-genai==2.29.0        # Google Gemini API SDK
+TA-Lib==0.8.1               # Technical analysis indicators (wheels bundle the C library)
+pandas==3.0.6               # Data analysis and manipulation
+numpy==2.5.4                # Numerical computing
+matplotlib==3.11.2          # Plotting
+mplfinance==0.12.10b0       # Candlestick charts
+pillow==12.3.0              # Image processing
+pytickersymbols==1.17.10    # S&P 500 ticker symbols
+yfinance==1.7.0             # Yahoo Finance market data
+markdown==3.11              # Markdown to HTML
+weasyprint==70.0            # HTML to PDF
+pdf2image==1.17.0           # PDF to image conversion
+img2pdf==0.6.3              # Image to PDF conversion
+pypdf==6.20.0               # PDF merging
+requests==2.34.2            # Telegram Bot API calls
+tqdm==4.70.1                # Progress bars

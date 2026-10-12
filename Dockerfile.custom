@@ -1,59 +1,21 @@
-# Use the official Python 3.12 image for ARM64 architecture as the base
-FROM arm64v8/python:3.12
+# Official multi-arch Python image (works on both ARM64 and x86_64)
+FROM python:3.13-slim
 
-# Install system dependencies required for TA-Lib and other Python packages
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libssl-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    wget \
-    curl \
-    llvm \
-    libc6-dev \
-    libedit-dev \
-    libncursesw5-dev \
-    xz-utils \
-    tk-dev \
-    libxml2-dev \
-    libxmlsec1-dev \
-    libffi-dev \
-    liblzma-dev \
-    wkhtmltopdf \
-    poppler-utils
+# System libraries: Pango for weasyprint (HTML to PDF), Poppler for pdf2image
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    fonts-dejavu-core \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Download and install TA-Lib
-RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
-    tar -xzf ta-lib-0.4.0-src.tar.gz && \
-    cd ta-lib && \
-    ./configure --prefix=/usr/local --build=aarch64-unknown-linux-gnu && \
-    make && \
-    make install && \
-    cd .. && \
-    rm -rf ta-lib*
+WORKDIR /opt/app
 
-# Upgrade pip, setuptools, and wheel
-RUN python3 -m pip install --no-cache-dir -U pip setuptools wheel
+# Install Python packages (TA-Lib ships prebuilt wheels, so no C build step is needed)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Python packages
-RUN python3 -m pip install --no-cache-dir grpcio==1.64.1           # gRPC support for networking
-RUN python3 -m pip install --no-cache-dir TA-Lib==0.4.32         # Technical Analysis library
-RUN python3 -m pip install --no-cache-dir pandas==2.2.2           # Data analysis and manipulation library
-RUN python3 -m pip install --no-cache-dir google-generativeai==0.7.0       # Google's generative AI API
-RUN python3 -m pip install --no-cache-dir plotly==5.22.0           # Interactive plotting library
-RUN python3 -m pip install --no-cache-dir matplotlib==3.8.0           # Plotting library
-RUN python3 -m pip install --no-cache-dir mplfinance==0.12.10b0       # Matplotlib utilities for financial plotting
-RUN python3 -m pip install --no-cache-dir pillow==10.3.0           # Image processing library
-RUN python3 -m pip install --no-cache-dir pytickersymbols==1.15.0  # Library for working with ticker symbols
-RUN python3 -m pip install --no-cache-dir pdfkit==1.0.0           # PDF generation library
-RUN python3 -m pip install --no-cache-dir pdf2image==1.17.0     # Library for converting PDF to images
-RUN python3 -m pip install --no-cache-dir img2pdf==0.5.1      # Library for converting images to PDF
-RUN python3 -m pip install --no-cache-dir PyPDF2==3.0.1          # Library for working with PDF files
-RUN python3 -m pip install --no-cache-dir pyyaml==6.0.1        # YAML parsing and emitting library
-RUN python3 -m pip install --no-cache-dir markdown==3.6      # Library for converting markdown
-RUN python3 -m pip install --no-cache-dir yfinance==0.2.54  # Yahoo Finance API for fetching financial data
+COPY . .
 
 # Set the command to run when the container starts
-CMD ["python", "/opt/app/main.py"]
+CMD ["python", "main.py"]
