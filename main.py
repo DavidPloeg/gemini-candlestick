@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import logging
 
 from candlestick import clock
 from candlestick.config import DATA_DIRECTORIES, DEFAULT_GEMINI_MODEL, MAX_MEDIA_GROUP_SIZE
@@ -12,6 +13,9 @@ from candlestick.telegram import TelegramBot
 
 # Print a message to indicate the script has started
 print('OK !', flush=True)
+
+# Configuration of Logger
+logging.basicConfig(format='%(asctime)s %(levelname)s %(name)s: %(message)s', level=logging.INFO)
 
 
 def send_reports(fund, telegram, batch_wait_sec):
