@@ -1,9 +1,12 @@
 """S&P 500 ticker list and daily price download."""
+import logging
+
 import pandas as pd
 from pytickersymbols import PyTickerSymbols
 from tqdm import tqdm
 import yfinance as yf
 
+logger = logging.getLogger(__name__)
 
 def reset_dataframe_index(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -98,8 +101,8 @@ def load_sp500():
             if pd.notna(temp_df['Close'].values[0]):
                 # If data is available, add it to the dictionary with the ticker as the key
                 sp500_df_dict[each_ticker] = temp_df
-        except:
-            pass
+        except Exception:
+            logger.warning(exc_info=True, msg=f"Skipping {each_ticker}: no candlestick data")
 
     # Filter the sp500_df to include only tickers with valid candlestick data
     sp500_df = sp500_df[sp500_df['symbol'].isin(list(sp500_df_dict.keys()))]

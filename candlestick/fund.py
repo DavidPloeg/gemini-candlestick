@@ -1,5 +1,6 @@
 """The Gemini Candlestick Investment Fund: charts the S&P 500 and holds a daily AI board meeting."""
 import gc
+import logging
 import os
 import random
 import sys
@@ -18,6 +19,7 @@ from candlestick.market_data import load_sp500
 from candlestick.parsing import MINUTES_START_MARKERS, clean_minutes_text, extract_json
 from candlestick.reports import images_to_pdf, markdown_to_pdf, merge_pdfs
 
+logger = logging.getLogger(__name__)
 
 class GeminiCandlestick:
     """
@@ -307,8 +309,8 @@ class GeminiCandlestick:
             for each_prompt_part in tqdm(self.prompt_parts, desc="gemini.delete"):
                 try:
                     self.gemini.delete(each_prompt_part.name)
-                except:
-                    pass
+                except Exception:
+                    logger.error(exc_info=True, msg=f"Unable to delete file {each_prompt_part.name}")
 
             # Generate attached text with retries
             # for _ in tqdm(range(6), desc="Generating attached_text"):  # Try up to 6 times
@@ -460,8 +462,8 @@ class GeminiCandlestick:
             for each_prompt_part in tqdm(self.prompt_parts, desc="gemini.delete"):
                 try:
                     self.gemini.delete(each_prompt_part.name)
-                except:
-                    pass
+                except Exception:
+                    logger.error(exc_info=True, msg=f"Unable to delete image {each_prompt_part.name}")
 
             # Garbage Collection (GC) - Explicitly delete and free up memory
             for each_prompt_part in self.prompt_parts:
@@ -481,7 +483,7 @@ class GeminiCandlestick:
                 for each_prompt_part in tqdm(self.prompt_parts, desc="gemini.delete"):
                     try:
                         self.gemini.delete(each_prompt_part.name)
-                    except:
-                        pass
-            except:
-                pass  # Ignore any errors during cleanup
+                    except Exception:
+                        logger.error(exc_info=True, msg=f"Unable to delete file {each_prompt_part.name}")
+            except Exception as e:
+                logger.error(exc_info=True, msg=e)
